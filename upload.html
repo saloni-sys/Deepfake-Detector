@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <title>Upload Image</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+  <div class="container">
+
+    <h2>Upload Image</h2>
+    <p>Select an image to detect faces</p>
+
+    <!-- Upload -->
+    <div class="upload-box">
+      <input type="file" id="fileInput" accept="image/*">
+      <label for="fileInput" class="upload-label">
+        📁 Choose Image
+      </label>
+    </div>
+
+    <div class="preview-box" id="previewBox">
+      <img id="imagePreview">
+    </div>
+    <!--check button-->
+    <button id="checkBtn">Check</button>
+    <!-- Loading UI -->
+    <div id="loading" class="loader" style="display: none;"></div>
+    <p id="loadingText" style="display: none;">Analyzing image...</p>
+    <p id="result"></p>
+
+
+
+    <script>
+      const fileInput = document.getElementById("fileInput");
+      const previewBox = document.getElementById("previewBox");
+      const img = document.getElementById("imagePreview");
+
+      fileInput.addEventListener("change", function () {
+        const file = this.files[0];
+
+        if (file) {
+          const reader = new FileReader();
+
+          reader.onload = function () {
+            img.src = reader.result;
+            previewBox.style.display = "flex"; // show container
+          };
+
+          reader.readAsDataURL(file);
+        }
+      });
+
+      const checkBtn = document.getElementById("checkBtn");
+      const loading = document.getElementById("loading");
+      const loadingText = document.getElementById("loadingText");
+
+      checkBtn.addEventListener("click", function () {
+        console.log("Button clicked");
+        if (!fileInput.files[0]) {
+          alert("Please upload an image first!");
+          return;
+        }
+
+        loading.style.display = "block";
+        loadingText.style.display = "block";
+
+        checkBtn.disabled = true;
+        checkBtn.innerText = "Processing...";
+
+
+
+        const formData = new FormData();
+        formData.append('file', fileInput.files[0]);
+
+        fetch('http://127.0.0.1:8000/detect', {
+          method: 'POST',
+          body: formData
+        })
+          .then(response => response.json())
+          .then(data => {
+            console.log(data);
+
+            const resultText = document.getElementById("result");
+
+            // ✅ backend fields use करो
+            const label = data.label;
+            const confidence = data.confidence;
+
+            resultText.innerText = `${label} (${(confidence * 100).toFixed(2)}%)`;
+
+            if (label === "fake") {
+              resultText.style.color = "red";
+            } else {
+              resultText.style.color = "green";
+            }
+
+            loading.style.display = "none";
+            loadingText.style.display = "none";
+
+            checkBtn.disabled = false;
+            checkBtn.innerText = "Check";
+          })
+          .catch(error => {
+            console.error('Error:', error);
+
+            const resultText = document.getElementById("result");
+
+            // ✅ Show error to user
+            resultText.innerText = "Something went wrong. Please try again.";
+            resultText.style.color = "red";
+
+            // ✅ Stop loader
+            loading.style.display = "none";
+            loadingText.style.display = "none";
+
+            // ✅ Re-enable button
+            checkBtn.disabled = false;
+            checkBtn.innerText = "Check";
+          });
+      });
+    </script>
+
+</body>
+
+</html>

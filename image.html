@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>DeepFace Detective</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="main">
+
+  <!-- LEFT SIDE -->
+  <div class="left">
+    <h1 class="logo">DeepFake Detector</h1>
+    <p>Detect deepfakes instantly</p>
+
+    <form id="loginForm">
+      <input 
+  type="email" 
+  id="email" 
+  name="email"
+  placeholder="Enter email" 
+  autocomplete="email"
+  required
+>
+
+<input 
+  type="password" 
+  id="password" 
+  name="password"
+  placeholder="Password" 
+  autocomplete="current-password"
+  required
+>>
+
+      <button type="submit">Start Detection</button>
+    </form>
+  </div>
+
+  <!-- RIGHT SIDE -->
+  <div class="right">
+    <img src="https://i.pinimg.com/736x/3c/dc/a5/3cdca5e5cc589f9830804a1fc8e57128.jpg">
+  </div>
+
+</div>
+
+<script>
+  const form = document.getElementById("loginForm");
+
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault(); // stop page reload
+
+    const email = document.getElementById("email").value;
+    const password = document.getElementById("password").value;
+
+    try {
+      const res = await fetch("http://localhost:3000/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ email, password })
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        alert("Login successful!");
+        window.location.href = "upload.html"; // only after success
+      } else {
+        alert(data.message || "Login failed");
+      }
+
+    } catch (err) {
+      console.error(err);
+      alert("Server error");
+    }
+  });
+</script>
+
+</body>
+</html>
