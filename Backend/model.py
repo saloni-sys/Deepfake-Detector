@@ -6,7 +6,7 @@ from fastapi import FastAPI
 
 # ── Constants ──────────────────────────────────────────────────────────────────
 
-MODEL_PATH  = "weights/efficientnet_deepfake.pth"  # path to your weights file
+MODEL_PATH  = "../weights/efficientnet_b4_best.pth"  # path to your weights file
 THRESHOLD   = 0.5                                   # above this = fake
 NUM_CLASSES = 2                                     # real, fake
 
@@ -31,7 +31,7 @@ def build_model() -> nn.Module:
     We only need 2 (real/fake), so we swap the head.
     """
     # Load EfficientNet-B4 architecture (no pretrained weights yet)
-    net = models.efficientnet_b4(weights=NotImplemented)
+    net = models.efficientnet_b4(weights=None)
 
     # Replace classifier head: original outputs 1000 classes → we need 2
     in_features = net.classifier[1].in_features
@@ -56,18 +56,23 @@ def load_model() -> nn.Module:
     """
     global model
 
+def load_model() -> nn.Module:
+    global model
+
     net = build_model()
 
-    # Load weights from disk into the model
-    # map_location ensures weights load correctly whether you have GPU or not
-    state_dict = torch.load(MODEL_PATH, map_location=device)
-    net.load_state_dict(state_dict)
+    checkpoint = torch.load(MODEL_PATH, map_location=device)
 
-    # Move model to GPU if available
+    if "state_dict" in checkpoint:
+        state_dict = checkpoint["state_dict"]
+    else:
+        state_dict = checkpoint
+
+    load_result = net.load_state_dict(state_dict, strict=False)
+    print("Missing keys:", load_result.missing_keys)
+    print("Unexpected keys:", load_result.unexpected_keys)
+
     net = net.to(device)
-
-    # Set to eval mode — disables dropout and batchnorm training behaviour
-    # Always do this before inference, never skip this line
     net.eval()
 
     model = net
