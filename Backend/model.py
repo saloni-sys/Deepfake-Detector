@@ -6,7 +6,7 @@ from fastapi import FastAPI
 
 # ── Constants ──────────────────────────────────────────────────────────────────
 
-MODEL_PATH  = "../weights/efficientnet_b4_best.pth"  # path to your weights file
+MODEL_PATH = "weights/efficientnet_b4_best.pth"  # path to your weights file
 THRESHOLD   = 0.5                                   # above this = fake
 NUM_CLASSES = 2                                     # real, fake
 
@@ -42,6 +42,7 @@ def build_model() -> nn.Module:
 
 # ── Step 2: Load weights ───────────────────────────────────────────────────────
 
+
 def load_model() -> nn.Module:
     """
     Builds the model and loads pretrained deepfake detection weights.
@@ -56,9 +57,6 @@ def load_model() -> nn.Module:
     """
     global model
 
-def load_model() -> nn.Module:
-    global model
-
     net = build_model()
 
     checkpoint = torch.load(MODEL_PATH, map_location=device)
@@ -68,9 +66,24 @@ def load_model() -> nn.Module:
     else:
         state_dict = checkpoint
 
-    load_result = net.load_state_dict(state_dict, strict=False)
-    print("Missing keys:", load_result.missing_keys)
-    print("Unexpected keys:", load_result.unexpected_keys)
+    new_state_dict = {}
+
+    for key, value in state_dict.items():
+        if key.startswith("backbone."):
+            key = key[len("backbone."):]
+
+        if key.startswith("module."):
+            key = key[len("module."):]
+
+        if key.startswith("head."):
+           key = "classifier." + key[len("head."):]    
+
+        new_state_dict[key] = value
+
+    load_result = net.load_state_dict(new_state_dict, strict=False)
+
+    print("Missing:", load_result.missing_keys[:10])
+    print("Unexpected:", load_result.unexpected_keys[:10])
 
     net = net.to(device)
     net.eval()
@@ -110,6 +123,10 @@ def predict(tensor: torch.Tensor) -> dict:
 
         # Get fake probability (index 1 = fake class)
         fake_prob = probabilities[0][1].item()  # .item() converts tensor → Python float
+
+        print("Logits:", logits.cpu().numpy())
+        print("Probabilities:", probabilities.cpu().numpy())
+        print("Fake prob:", fake_prob)
 
     # Apply threshold to decide label
     label = "fake" if fake_prob >= THRESHOLD else "real"

@@ -1,129 +1,106 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Upload Image</title>
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css" />
 </head>
-
 <body>
-
   <div class="container">
-
     <h2>Upload Image</h2>
     <p>Select an image to detect faces</p>
 
-    <!-- Upload -->
     <div class="upload-box">
-      <input type="file" id="fileInput" accept="image/*">
-      <label for="fileInput" class="upload-label">
-        📁 Choose Image
-      </label>
+      <input type="file" id="fileInput" accept="image/*" hidden />
+      <label for="fileInput" class="upload-label">📁 Choose Image</label>
     </div>
 
-    <div class="preview-box" id="previewBox">
-      <img id="imagePreview">
+    <div class="preview-box" id="previewBox" style="display: none;">
+      <img id="imagePreview" alt="Image preview" />
     </div>
-    <!--check button-->
-    <button id="checkBtn">Check</button>
-    <!-- Loading UI -->
+
+    <button id="checkBtn" type="button">Check</button>
+
     <div id="loading" class="loader" style="display: none;"></div>
     <p id="loadingText" style="display: none;">Analyzing image...</p>
     <p id="result"></p>
+  </div>
 
+  <script>
+    const fileInput = document.getElementById("fileInput");
+    const previewBox = document.getElementById("previewBox");
+    const imagePreview = document.getElementById("imagePreview");
+    const checkBtn = document.getElementById("checkBtn");
+    const loading = document.getElementById("loading");
+    const loadingText = document.getElementById("loadingText");
+    const resultText = document.getElementById("result");
 
+    fileInput.addEventListener("change", function () {
+      const file = this.files[0];
 
-    <script>
-      const fileInput = document.getElementById("fileInput");
-      const previewBox = document.getElementById("previewBox");
-      const img = document.getElementById("imagePreview");
+      if (!file) {
+        previewBox.style.display = "none";
+        imagePreview.src = "";
+        return;
+      }
 
-      fileInput.addEventListener("change", function () {
-        const file = this.files[0];
+      const reader = new FileReader();
+      reader.onload = function (e) {
+        imagePreview.src = e.target.result;
+        previewBox.style.display = "flex";
+      };
+      reader.readAsDataURL(file);
+    });
 
-        if (file) {
-          const reader = new FileReader();
+    checkBtn.addEventListener("click", async function () {
+      const file = fileInput.files[0];
 
-          reader.onload = function () {
-            img.src = reader.result;
-            previewBox.style.display = "flex"; // show container
-          };
+      if (!file) {
+        alert("Please upload an image first!");
+        return;
+      }
 
-          reader.readAsDataURL(file);
-        }
-      });
+      loading.style.display = "block";
+      loadingText.style.display = "block";
+      resultText.innerText = "";
 
-      const checkBtn = document.getElementById("checkBtn");
-      const loading = document.getElementById("loading");
-      const loadingText = document.getElementById("loadingText");
+      checkBtn.disabled = true;
+      checkBtn.innerText = "Processing...";
 
-      checkBtn.addEventListener("click", function () {
-        console.log("Button clicked");
-        if (!fileInput.files[0]) {
-          alert("Please upload an image first!");
+      try {
+        const formData = new FormData();
+        formData.append("file", file);
+
+        const response = await fetch("http://127.0.0.1:8000/detect", {
+          method: "POST",
+          body: formData,
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          resultText.innerText = data.detail || "Something went wrong.";
+          resultText.style.color = "red";
           return;
         }
 
-        loading.style.display = "block";
-        loadingText.style.display = "block";
+        const label = data.label;
+        const confidence = data.confidence;
 
-        checkBtn.disabled = true;
-        checkBtn.innerText = "Processing...";
-
-
-
-        const formData = new FormData();
-        formData.append('file', fileInput.files[0]);
-
-        fetch('http://127.0.0.1:8000/detect', {
-          method: 'POST',
-          body: formData
-        })
-          .then(response => response.json())
-          .then(data => {
-            console.log(data);
-
-            const resultText = document.getElementById("result");
-
-            // ✅ backend fields use करो
-            const label = data.label;
-            const confidence = data.confidence;
-
-            resultText.innerText = `${label} (${(confidence * 100).toFixed(2)}%)`;
-
-            if (label === "fake") {
-              resultText.style.color = "red";
-            } else {
-              resultText.style.color = "green";
-            }
-
-            loading.style.display = "none";
-            loadingText.style.display = "none";
-
-            checkBtn.disabled = false;
-            checkBtn.innerText = "Check";
-          })
-          .catch(error => {
-            console.error('Error:', error);
-
-            const resultText = document.getElementById("result");
-
-            // ✅ Show error to user
-            resultText.innerText = "Something went wrong. Please try again.";
-            resultText.style.color = "red";
-
-            // ✅ Stop loader
-            loading.style.display = "none";
-            loadingText.style.display = "none";
-
-            // ✅ Re-enable button
-            checkBtn.disabled = false;
-            checkBtn.innerText = "Check";
-          });
-      });
-    </script>
-
+        resultText.innerText = `${label.toUpperCase()} (${(confidence * 100).toFixed(2)}%)`;
+        resultText.style.color = label === "fake" ? "red" : "green";
+      } catch (error) {
+        console.error("Error:", error);
+        resultText.innerText = "Could not connect to server. Please try again.";
+        resultText.style.color = "red";
+      } finally {
+        loading.style.display = "none";
+        loadingText.style.display = "none";
+        checkBtn.disabled = false;
+        checkBtn.innerText = "Check";
+      }
+    });
+  </script>
 </body>
-
 </html>

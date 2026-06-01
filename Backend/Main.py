@@ -2,8 +2,8 @@ from fastapi import FastAPI, File, UploadFile, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
-from model import lifespan, predict
-from detector import preprocess_image, is_valid_image
+from Backend.model import lifespan, predict
+from Backend.detector import preprocess_image, is_valid_image
 
 # ── App setup ──────────────────────────────────────────────────────────────────
 # lifespan loads ML model once at startup — kept from new version
